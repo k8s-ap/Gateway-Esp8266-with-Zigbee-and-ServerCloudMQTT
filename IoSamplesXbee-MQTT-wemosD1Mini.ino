@@ -120,7 +120,7 @@ void reconnect() {
       // Once connected, publish an announcement...
       client.publish("Log", "Dispositivo ESP8266ClientHome reconectado al servidor mqtt://mqtt.diveriot.com:1883");
       // ... and resubscribe
-      client.subscribe("Casa/Living/Luz"); // Esto creo que esta de más? O me debo suscribir a tal TOPIC cuando me conecto por primera vez al serverMQTT?
+      client.subscribe("Casa/LivingRoom/Luz"); // Esto creo que esta de más? O me debo suscribir a tal TOPIC cuando me conecto por primera vez al serverMQTT?
     } else {
       Serial1.print("failed, rc=");
       Serial1.print(client.state());
