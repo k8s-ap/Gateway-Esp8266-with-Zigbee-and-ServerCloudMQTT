@@ -139,25 +139,26 @@ void setup() {
 void loop() {
   //-------logica timestamp---------//
   
-  digitalClockDisplay(); // This just prints the "system time"  
-  delay(0.1 * _millisMinute); // mins * millis in 1 min // Do other stuff etc, delay here just emulates that
-
+  //digitalClockDisplay(); // This just prints the "system time"  
+  //delay(0.1 * _millisMinute); // mins * millis in 1 min // Do other stuff etc, delay here just emulates that
   
   //-------logica mqtt---------//
   //attempt to read a packet (intento leer un frame)   
-  xbee.readPacket();
+  xbee.readPacket();  
 
   if (xbee.getResponse().isAvailable()) {
     // got something (tengo algo)
 
     if (xbee.getResponse().getApiId() == ZB_IO_SAMPLE_RESPONSE) {
-      //verifico que aún estoy conectado al serverMQTT
+      time_t t=now();// We'll grab the time so it doesn't change whilst we're printing it.  Obtengo la hora cada vez que recibo como respuesta un frame IO Sample
+      
+      // Verifico que aún estoy conectado al serverMQTT
       if (!client.connected()) {
         reconnect();
       }
       client.loop();  //Para que el cliente procese los mensajes entrantes y mantenga su conexión con el servidor MQTT.
       
-      //obtengo el Sample-IO del frame recibido y lo guardo en una variable llamada "ioSample"
+      // Obtengo el Sample-IO del frame recibido y lo guardo en una variable llamada "ioSample"
       xbee.getResponse().getZBRxIoSampleResponse(ioSample);
 
       //Serial1.print("Received I/O Sample from: ");
@@ -180,15 +181,20 @@ void loop() {
                 if (ioSample.isDigitalOn(i) == 0) {
                   // todo normal                  
                   //Serial1.println("No se detecto movimiento");                  
-                  snprintf (motion, 50, "{\"value\":\"False\", \"timestamp\":\"22:13:00\"}");
+                  //snprintf(motion, 50, "{\"value\":\"False\", \"timestamp\":\"22:13:00\"}");
+                  snprintf(motion, 50, "{\"value\":\"False\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;                  
+
+  //Now print all the elements of the time secure that it won't change under our feet
+  //printDigits(hour(t));
+  //Serial1.print(":");
                   Serial1.print("Publish message on topic 'Casa/Patio/Motion001': ");
                   Serial1.println(motion);
                   client.publish("Casa/Patio/Motion001", motion); //Falta agregarle stampTime (marca de tiempo)
                 }
                 if (ioSample.isDigitalOn(i) == 1) {
                   // Se detecto movimiento
-                  //Serial1.println("Advertencia! Se detecto movimiento.");
-                  snprintf (motion, 50, "{\"value\":\"True\", \"timestamp\":\"22:17:00\"}");
+                  //Serial1.println("Advertencia! Se detecto movimiento.");                  
+                  snprintf(motion, 50, "{\"value\":\"True\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;                  
                   Serial1.print("Publish message on topic 'Casa/Patio/Motion001': ");
                   Serial1.println(motion);
                   client.publish("Casa/Patio/Motion001", motion); //{\"value\":\"msg\", \"timestamp\":\"22:13:00\"}
@@ -206,7 +212,7 @@ void loop() {
                 if (ioSample.isDigitalOn(i) == 0) {
                   // todo normal                  
                   //Serial1.println("Puerta cerrada");                  
-                  snprintf (door, 50, "{\"value\":\"Closed\", \"timestamp\":\"22:17:00\"}");
+                  snprintf (door, 50, "{\"value\":\"Closed\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;                  
                   Serial1.print("Publish message on topic 'Casa/LivingRoom/Door': ");
                   Serial1.println(door);
                   client.publish("Casa/LivingRoom/Door", door);
@@ -214,7 +220,7 @@ void loop() {
                 if (ioSample.isDigitalOn(i) == 1) {
                   // Se detecto apertura de puerta
                   //Serial1.println("Advertencia! Puerta abierta");
-                  snprintf (door, 50, "{\"value\":\"Open\", \"timestamp\":\"22:17:00\"}");
+                  snprintf (door, 50, "{\"value\":\"Open\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;                  
                   Serial1.print("Publish message on topic 'Casa/LivingRoom/Door': ");
                   Serial1.println(door);
                   client.publish("Casa/LivingRoom/Door", door); //{value:msg, timestamp:22:13:00} // cambiar nombre de la variable msg por value
@@ -257,7 +263,7 @@ void loop() {
                    * ésta será recortada, es decir, si reservamos 50 bytes para la cadena, con sprintf() tal vez se escriban más, 
                    * depende de los datos a escribir, pero snprintf() escribirá 50.
                   */
-                  snprintf (gas, 50, "{\"value\":\"Normal\", \"timestamp\":\"22:13:00\"}");
+                  snprintf (gas, 50, "{\"value\":\"Normal\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;                  
                   Serial1.print("Publish message on topic 'Casa/Cocina/Gas': ");
                   Serial1.println(gas);
                   client.publish("Casa/Cocina/Gas", gas);
@@ -274,7 +280,7 @@ void loop() {
                    * ésta será recortada, es decir, si reservamos 50 bytes para la cadena, con sprintf() tal vez se escriban más, 
                    * depende de los datos a escribir, pero snprintf() escribirá 50.
                   */
-                  snprintf (gas, 50, "{\"value\":\"Danger\", \"timestamp\":\"22:13:00\"}");
+                  snprintf (gas, 50, "{\"value\":\"Danger\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;                  
                   Serial1.print("Publish message topic 'Casa/Cocina/Gas': ");
                   Serial1.println(gas);
                   client.publish("Casa/Cocina/Gas", gas);
