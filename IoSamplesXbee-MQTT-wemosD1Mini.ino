@@ -352,8 +352,9 @@ time_t getNTPTime() {
     // combine the four bytes (two words) into a long integer
     // this is NTP time (seconds since Jan 1 1900)
     unsigned long secsSince1900 = highWord << 16 | lowWord;
-    Serial1.print("Seconds since Jan 1 1900 = ");
-    Serial1.println(secsSince1900);
+    //Serial1.print("Seconds since Jan 1 1900 = ");
+    //Serial1.println(secsSince1900);
+    Serial1.println("Date and hour sincronized");
  
     // now convert NTP time into everyday time:
     //Serial1.print("Unix time = ");
@@ -412,8 +413,7 @@ void sendNTPpacket(const char* address) {
 }
 
 void setup_wifi() {
-  Serial1.println(" ");   
-  Serial1.println("Wait for WiFi... ");   
+  Serial1.println("\nWait for WiFi... ");   
   wifiMulti.addAP("TNTsport", "9122018TresUno");
   wifiMulti.addAP("FBWAY-B262", "965EE62A32AC1825");
   wifiMulti.addAP("angelectronica", "4242714angel");
@@ -453,13 +453,13 @@ void callback(char* topic, byte* payload, unsigned int length) {
 void reconnect() {
   // Loop until we're reconnected
   while (!client.connected()) {
-    Serial1.print("Attempting MQTT connection...");
+    Serial1.print("\nAttempting MQTT connection...");
     // Create a random client ID
     String clientId = "Gateway-Wemos-D1Mini-";
     clientId += String(random(0xffff), HEX);//cada vez que nos reconectamos, debemos hacerlo con un nuevo clientID (no el mismo).
     // Attempt to connect
     if (client.connect(clientId.c_str())) { //c_str() Convierte el contenido de una cadena a una cadena de estilo C. Nunca debe modificar la cadena a través del puntero devuelto.
-      Serial1.println("connected");
+      Serial1.println("connected \n");
       // Once connected, publish an announcement...
       client.publish("Log", "Gateway-Wemos-D1Mini reconectado al servidor mqtt://mqtt.diveriot.com:1883");
       // ... and resubscribe
