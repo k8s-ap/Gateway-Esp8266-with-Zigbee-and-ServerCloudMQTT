@@ -1,51 +1,39 @@
 /*
-ESP8266 MQTT
+  ESP8266 and MQTT
 
- This sketch demonstrates the capabilities of the pubsub library in combination
- with the ESP8266 board/library.  Tambien combina la funcionalidad de WifiMulti. TimeStamp y Xbee-Arduino
+  This sketch demonstrates the capabilities of:
+  - the pubsub library in combination with the ESP8266 board/library.
 
- It connects to an MQTT server "mqtt.diveriot.com:1883 then:
-  - publishes "the samples" to the topic "casa/xbee-coordinator" every receives I/O samples from a remote radio (two seconds)
-  - subscribes to the topic "casa/livingroom/luz", printing out any messages
-    it receives. NB - it assumes the received payloads are strings not binary
-  - If the first character of the topic "casa/livingroom/luz" is an 1, envia un frame al xbee-router para ENCENDER luz, sino envia un frame al xbee-router para APAGAR luz(switch ON the ESP Led,
-    else switch it off)
+  It connects to an MQTT Server "mqtt.diveriot.com:1883 then:
+  - Publishes "The Samples " to the topic "casa/.../..." every receives I/O Samples from a Remote radio
 
- It will reconnect to the server if the connection is lost using a blocking
- reconnect function. See the 'mqtt_reconnect_nonblocking' example for how to
- achieve the same result without blocking the main loop.
+  It will reconnect to the Server if the connection is lost using a blocking
+  reconnect function.
 
- To install the ESP8266 board, (using Arduino 1.6.4+):
-  - Add the following 3rd party board manager under "File -> Preferences -> Additional Boards Manager URLs":
-       http://arduino.esp8266.com/stable/package_esp8266com_index.json
-  - Open the "Tools -> Board -> Board Manager" and click install for the ESP8266"
-  - Select your ESP8266 in "Tools -> Board"
+  This example is for Series 2 XBee Radios only
+  Receives I/O samples from a remote radio.
+  The remote radio must have IR > 0 and at least one digital or analog input enabled.
+  The XBee coordinator should be connected to the Wemos-D1-Mini.
 
-  ---------------------
- 
-This example is for Series 2 (ZigBee) XBee Radios only
-Receives I/O samples from a remote radio.
-The remote radio must have IR > 0 and at least one digital or analog input enabled.
-The XBee coordinator should be connected to the Wemos-D1-Mini.
- 
-This example uses the SoftSerial library to view the XBee communication.  I am using a 
-Modern Device USB BUB board (http://moderndevice.com/connect) and viewing the output
-with the Arduino Serial Monitor.
+  This example uses the SoftSerial library to debug the XBee communication. I am using a
+  Modern Device USB BUB board (http://moderndevice.com/connect) and viewing the output
+  with the Arduino Serial Monitor.
 
-// Connect Wemos-d1-mini pin Rx to TX of Coordinator-XbeeS2C device
-// Connect Wemos-d1-mini pin Tx to RX of Coordinator-XbeeS2C device
-// Remember to connect all devices to a common Ground: Coordinator-XbeeS2C, Wemos-d1-mini and TTL-USB-Serial device
-
+  // Connect Wemos-D1-Mini pin Rx to TX of Coordinator-XbeeS2C device
+  // Connect Wemos-D1-Mini pin Tx to RX of Coordinator-XbeeS2C device
+  // Remember to connect all devices to a common Ground (Coordinator-XbeeProS2C, Wemos-D1-Mini and TTL-USB-Serial device)
 */
+
 #include <XBee.h>
 #include <SoftwareSerial.h>
-#include <ESP8266WiFi.h> // How we connect to your local wifi
+#include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <WiFiUdp.h> // UDP library which is how we communicate with Time Server
-#include <TimeLib.h> // See Arduino Playground for details of this useful time synchronisation library
+#include <TimeLib.h> // Synchronisation library
 #include <ESP8266WiFiMulti.h>
 
-//------------BEGIN Declaracion feature timestamp--------------//
+//------------ Feature timestamp --------------//
+
 #define WifiTimeOutSeconds 10
 unsigned int localPort = 8888; // Just an open port we can use for the UDP packets coming back in
 
@@ -58,7 +46,7 @@ const int NTP_PACKET_SIZE = 48; // NTP time stamp is in the first 48 bytes of th
 byte packetBuffer[NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packets
 WiFiUDP Udp; // A UDP instance to let us send and receive packets over UDP
 const int timeZone = -3; // Your time zone relative to GMT/UTC. // Not used (yet)
-String DoW[] = {"Domingo", "Lunes","Martes","Miercoles","Jueves","Viernes","Sabado"}; // Days of week. Day 1 = Sunday
+String DoW[] = {"Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"}; // Days of week. Day 1 = Sunday
 
 // How often to resync the time (under normal and error conditions)
 #define _resyncSeconds 300 //300 is 5 minutos // 3600 is 1 hour. 86400 is on day
@@ -71,12 +59,13 @@ void printDigits(int digits);
 void digitalClockDisplay();
 time_t getNTPTime();
 
-//------------FIN Declaracion feature timestamp--------------//
+//------------ FIN Feature timestamp --------------//
+
 
 ESP8266WiFiMulti wifiMulti;
 boolean connectioWasAlive = true;
 
-//------------BEGIN Declaracion feature MQTT and Xbee-Arduino--------------//
+//------------ Feature MQTT and Xbee-Arduino--------------//
 
 const char* mqtt_server = "mqtt.diveriot.com";
 const int mqtt_port = 1883;
@@ -90,28 +79,24 @@ int timestamp = 0;
 
 XBee xbee = XBee();
 ZBRxIoSampleResponse ioSample = ZBRxIoSampleResponse();
-XBeeAddress64 routerXBeeAddress = XBeeAddress64(0x0013A200, 0x41809E95); //Luego mas adelante, reemplazar nombre por uno mas descriptivo como por ejemplo: remoteXBeeAddress
-XBeeAddress64 endDeviceXBeeAddress = XBeeAddress64(0x0013A200, 0x4180A081);
+XBeeAddress64 routerXBeeMAC = XBeeAddress64(0x0013A200, 0x41809E95);
+XBeeAddress64 endDeviceXBeeMAC = XBeeAddress64(0x0013A200, 0x4180A081);
+
+//------------ FIN Feature MQTT and Xbee-Arduino--------------//
 
 
-//------------FIN Declaracion feature mqtt and Xbee-Arduino--------------//
+void setup() {
+  //------- Usado por todas las bibliotecas ---------//
 
-
-//-----------------------------------------------------------------------------
-//  SETUP
-//-----------------------------------------------------------------------------
-
-void setup() { 
-  //-------configuracion compartida entre bibliotecas ---------//
-  
-  WiFi.mode(WIFI_OFF);        //Prevents reconnection issue (taking too long to connect)  
-  Serial.begin(9600);           // Inicio comunicacion-serial con el XBeeS2C-Coordinador  
+  WiFi.mode(WIFI_OFF);        //Prevents reconnection issue (taking too long to connect)
+  Serial.begin(9600);           // Inicio la comunicacion-serial entre el dispositivo XBeeProS2C (Nodo Zigbee Coordinador)
   xbee.setSerial(Serial);     // Seteo/vinculo dicha conmunicacion-serial con el objeto xbee.
-  // start soft-serial 1 
-  Serial1.begin(9600);        // Inicio comunicacion-serial-1 para mostrar por pantalla los mensajes de depuración. ¿Y espero a que se abra el puerto declarado al inicio?
-  setup_wifi();  // Config y conec to WiFi
+  // start soft-serial 1
+  Serial1.begin(9600);        // Inicio comunicacion-serial-1 para mostrar por el monitor serial los mensajes de depuración
+  setup_wifi();
+
+  //------- Timestamp---------//
   
-  //-------config timestamp---------//
   Udp.begin(localPort); // What port will the UDP/NTP packet respond on?
   setSyncProvider(getNTPTime); // What is the function that gets the time (in ms since 01/01/1900)?
   // How often should we synchronise the time on this machine (in seconds)?
@@ -119,183 +104,169 @@ void setup() {
   // Use 86400 for 1 daybut once an hour (3600) is more than enough usually
   setSyncInterval(_resyncSeconds); // just for demo purposes!
 
-  //-------config mqtt---------//
+  //------- Config mqtt---------//
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
 }
 
 
-//-----------------------------------------------------------------------------
-// LOOP
-//-----------------------------------------------------------------------------
 void loop() {
   monitorWiFi();
   if ( (wifiMulti.run() == WL_CONNECTED) && (connectioWasAlive == true) )  {
-    
-    //-------logica mqtt---------//
-    //attempt to read a packet (intento leer un frame)   
-    xbee.readPacket();  
-  
+
+    //------- Logica MQTT ---------//
+    // Attempt to read a packet (Intento leer un frame)
+    xbee.readPacket();
+
     if (xbee.getResponse().isAvailable()) {
       // got something (tenemos algo )
-  
+
       if (xbee.getResponse().getApiId() == ZB_IO_SAMPLE_RESPONSE) {
-        time_t t=now();// We'll grab the time so it doesn't change whilst we're printing it.  Obtengo la hora cada vez que recibo como respuesta un frame IO Sample
-                //nota: solo se tiene en cuenta el tymeSincronize cuando se recibe un frame del tipo Sample_response
-        // Verifico que aún estoy conectado al serverMQTT
+        time_t t = now(); // Guardo la hora exacta 
+        // Me aseguro que mantengo la conexion activa con el Servidor Backend
         if (!client.connected()) {
           reconnect();
         }
-        client.loop();  //Para que el cliente procese los mensajes entrantes y mantenga su conexión con el servidor MQTT.
-        
+        client.loop();  //Para que el Wemos-D1-Mini procese los mensajes entrantes y mantenga su conexión al Servidor Backend.
+
         // Obtengo el Sample-IO del frame recibido y lo guardo en una variable llamada "ioSample"
         xbee.getResponse().getZBRxIoSampleResponse(ioSample);
-  
+
         //Serial1.print("Received I/O Sample from: ");
-        //Serial1.print(ioSample.getRemoteAddress64().getMsb(), HEX);  
-        //Serial1.print(ioSample.getRemoteAddress64().getLsb(), HEX);  
+        //Serial1.print(ioSample.getRemoteAddress64().getMsb(), HEX);
+        //Serial1.print(ioSample.getRemoteAddress64().getLsb(), HEX);
         //Serial1.println("");
-        
-        //si MAC Adress es del Nodo Router. 
-        if (routerXBeeAddress == ioSample.getRemoteAddress64() ) {
+
+        //si MAC Adress es del Nodo Router.
+        if (routerXBeeMAC == ioSample.getRemoteAddress64() ) {
           //Serial1.println("Received I/O Sample from ROUTER");
           if (ioSample.containsDigital()) {
             //Serial1.println("Sample contains digtal data");
-            
             // check digital inputs
             for (int i = 0; i <= 12; i++) {
               // si es DI0 (Sensor de movimiento)
               if (i == 0) {
-                // si DIO0 (pin 20) esta seteado como Digital Input (previamente realizado con XCTU)
-                if (ioSample.isDigitalEnabled(i)) {                
+                // si DIO0 (pin 20) esta seteado como Digital Input (previamente configurado con XCTU)
+                if (ioSample.isDigitalEnabled(i)) {
                   if (ioSample.isDigitalOn(i) == 0) {
-                    // todo normal                  
-                    //Serial1.println("No se detecto movimiento");                  
+                    //Serial1.println("No se detecto movimiento");
                     //snprintf(motion, 50, "{\"value\":\"False\", \"timestamp\":\"22:13:00\"}");
-                    snprintf(motion, 50, "{\"value\":\"False\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;                  
-  
+                    snprintf(motion, 50, "{\"value\":\"False\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;                                        
                     Serial1.print("Publish message on topic 'Casa/Patio/Motion001': ");
                     Serial1.println(motion);
-                    client.publish("Casa/Patio/Motion001", motion); //Falta agregarle stampTime (marca de tiempo)
+                    client.publish("Casa/Patio/Motion001", motion);
                   }
                   if (ioSample.isDigitalOn(i) == 1) {
-                    // Se detecto movimiento
-                    //Serial1.println("Advertencia! Se detecto movimiento.");                  
-                    snprintf(motion, 50, "{\"value\":\"True\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;                  
+                    //Serial1.println("Se detecto movimiento.");
+                    snprintf(motion, 50, "{\"value\":\"True\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
                     Serial1.print("Publish message on topic 'Casa/Patio/Motion001': ");
                     Serial1.println(motion);
-                    client.publish("Casa/Patio/Motion001", motion); //{\"value\":\"msg\", \"timestamp\":\"22:13:00\"}
-                  }                
+                    client.publish("Casa/Patio/Motion001", motion);
+                  }
                 }
-                else {  
+                else {
                   Serial1.println("DIO0 (Pin20) no esta seteado como Digital-Input. Debe configurarlo con XCTU");
                 }
               }
               /*-----------------------------*/
               // si es DI2 (Sensor de puerta)
-              if (i == 2) {
-                // si DIO2 (pin 18) esta seteado como Digital Input (previamente realizado con XCTU)
-                if (ioSample.isDigitalEnabled(i)) {                
-                  if (ioSample.isDigitalOn(i) == 0) {
-                    // todo normal                  
-                    //Serial1.println("Puerta cerrada");                  
-                    snprintf (door, 50, "{\"value\":\"Closed\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;                  
+              if (i == 2) {                
+                if (ioSample.isDigitalEnabled(i)) {
+                  if (ioSample.isDigitalOn(i) == 0) {                    
+                    //Serial1.println("Puerta cerrada");
+                    snprintf (door, 50, "{\"value\":\"Closed\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
                     Serial1.print("Publish message on topic 'Casa/LivingRoom/Door': ");
                     Serial1.println(door);
                     client.publish("Casa/LivingRoom/Door", door);
                   }
                   if (ioSample.isDigitalOn(i) == 1) {
-                    // Se detecto apertura de puerta
                     //Serial1.println("Advertencia! Puerta abierta");
-                    snprintf (door, 50, "{\"value\":\"Open\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;                  
+                    snprintf (door, 50, "{\"value\":\"Open\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
                     Serial1.print("Publish message on topic 'Casa/LivingRoom/Door': ");
                     Serial1.println(door);
-                    client.publish("Casa/LivingRoom/Door", door); //{value:msg, timestamp:22:13:00} // cambiar nombre de la variable msg por value
-                  }                
+                    client.publish("Casa/LivingRoom/Door", door);
+                  }
                 }
-                else {  
+                else {
                   Serial1.println("DIO2 (Pin 18) no esta seteado como Digital-Input. Debe configurarlo con XCTU");
                 }
               }
-              
             }
           }
-          
         }
-        
-        //Compara si el frame proviene del nodo EndDevice
-        if (endDeviceXBeeAddress == ioSample.getRemoteAddress64() ) {
+
+        //Si el frame proviene del Nodo EndDevice
+        if (endDeviceXBeeMAC == ioSample.getRemoteAddress64() ) {
           //Serial1.println("Received I/O Sample from END-DEVICE");
-          //El frame contiene un sample con dato Digital
+          //El frame contiene Sample (muestra) de dato Digital
           if (ioSample.containsDigital()) {
-            //Serial1.println("Sample contains digtal data");          
+            //Serial1.println("Sample contains digtal data");
             // check digital inputs
             for (int i = 0; i <= 12; i++) {
               // si es DI0 (Sensor de GAS)
               if (i == 0) {
                 // si DIO0 (pin 20) esta seteado como Digital Input (previamente realizado con XCTU)
-                if (ioSample.isDigitalEnabled(i)) {                
+                if (ioSample.isDigitalEnabled(i)) {
                   if (ioSample.isDigitalOn(i) == 1) {
-                    // todo normal                  
+                    // todo normal
                     //Serial1.println("No se detecto niveles peligrosos de dioxido de carbono / gas");
-                    
-                    /**/          
+
+                    /**/
                     //Envio informacion del Sample al Server Backend
-                    
+
                     /*
-                     * Aunque con sprintf todo funciona bien, recomiendo utilizar snprintf() ya que a éste último 
-                     * le debemos decir el tamaño de la variable a escribir y si los valores hacen la cadena más larga de lo que debería, 
-                     * ésta será recortada, es decir, si reservamos 50 bytes para la cadena, con sprintf() tal vez se escriban más, 
-                     * depende de los datos a escribir, pero snprintf() escribirá 50.
+                       Aunque con sprintf todo funciona bien, recomiendo utilizar snprintf() ya que a éste último
+                       le debemos decir el tamaño de la variable a escribir y si los valores hacen la cadena más larga de lo que debería,
+                       ésta será recortada, es decir, si reservamos 50 bytes para la cadena, con sprintf() tal vez se escriban más,
+                       depende de los datos a escribir, pero snprintf() escribirá 50.
                     */
-                    snprintf (gas, 50, "{\"value\":\"Normal\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;                  
+                    snprintf (gas, 50, "{\"value\":\"Normal\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
                     Serial1.print("Publish message on topic 'Casa/Cocina/Gas': ");
                     Serial1.println(gas);
                     client.publish("Casa/Cocina/Gas", gas);
-                    
+
                   }
-                  // Si dioxido de carbono                  
+                  // Si dioxido de carbono
                   if (ioSample.isDigitalOn(i) == 0) {
                     //Serial1.println("Peligro!.Se detecto Gas Toxico");
-                    snprintf (gas, 50, "{\"value\":\"Danger\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;                  
+                    snprintf (gas, 50, "{\"value\":\"Danger\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
                     Serial1.print("Publish message topic 'Casa/Cocina/Gas': ");
                     Serial1.println(gas);
-                    client.publish("Casa/Cocina/Gas", gas);                    
+                    client.publish("Casa/Cocina/Gas", gas);
                   }
                   //Serial1.print("Digital (DI");
                   //Serial1.print(i, DEC);
                   //Serial1.print(") is ");
                   //Serial1.println(ioSample.isDigitalOn(i), DEC);
                 }
-                else {  
-                  Serial1.println("Ningun PIN esta seteado como Digital-Input. Debe configurarlo con XCTU");              
+                else {
+                  Serial1.println("Ningun PIN esta seteado como Digital-Input. Debe configurarlo con XCTU");
                 }
-              }              
+              }
             }
-          }              
-        }       
-      } 
+          }
+        }
+      }
       else {
         Serial1.print("Expected I/O Sample, but got ");
         Serial1.print(xbee.getResponse().getApiId(), HEX);
-      }    
+      }
     } else if (xbee.getResponse().isError()) {
-      Serial1.print("Error reading packet.  Error code: ");  
+      Serial1.print("Error reading packet.  Error code: ");
       Serial1.println(xbee.getResponse().getErrorCode());
     }
-  }        
+  }
 }
 
-//-----------------------------------------------------------------------------
-// METHODS AND FUNCTIONS   
-//-----------------------------------------------------------------------------
 
+//--------------------------
+// METHODS AND FUNCTIONS
+//--------------------------
 
 // Prints a nice time display
-//-----------------------------------------------------------------------------
 void digitalClockDisplay() {
   // We'll grab the time so it doesn't change whilst we're printing it
-  time_t t=now();
+  time_t t = now();
 
   //Now print all the elements of the time secure that it won't change under our feet
   //printDigits(hour(t)-3); // le sumo tres unidades para obtgener la hora correspondiente a mi zona (timezone=-3)
@@ -305,7 +276,7 @@ void digitalClockDisplay() {
   Serial1.print(":");
   printDigits(second(t));
   Serial1.print("    ");
-  Serial1.print(DoW[weekday(t)-1]);
+  Serial1.print(DoW[weekday(t) - 1]);
   Serial1.print(" ");
   printDigits(day(t));
   Serial1.print("/");
@@ -326,15 +297,15 @@ void printDigits(int digits) {
 //-----------------------------------------------------------------------------
 time_t getNTPTime() {
   // Send a UDP packet to the NTP pool address
-  Serial1.print("\nSending NTP packet to "); 
+  Serial1.print("\nSending NTP packet to ");
   Serial1.println(timeServer);
-  sendNTPpacket(timeServer);  // Enviamos un paquete al servidor NTP para pedir los segundos desde 1900 y sincronizar
+  sendNTPpacket(timeServer);  // Solicitamos al Servidor NTP los segundos transcurridos desde el año 1900 (para luego calcular la hora actua)
 
   // Wait to see if a reply is available - timeout after X seconds. At least
   // this way we exit the 'delay' as soon as we have a UDP packet to process
-  #define UDPtimeoutSecs 5
+#define UDPtimeoutSecs 5
   int timeOutCnt = 0;
-  while (Udp.parsePacket() == 0 && ++timeOutCnt < (UDPtimeoutSecs * 10)){
+  while (Udp.parsePacket() == 0 && ++timeOutCnt < (UDPtimeoutSecs * 10)) {
     delay(100);
     yield(); //Pasa el control a otras tareas cuando se llama. Idealmente, yield () debería usarse en funciones que tardarán un tiempo en completarse
   }
@@ -355,7 +326,7 @@ time_t getNTPTime() {
     //Serial1.print("Seconds since Jan 1 1900 = ");
     //Serial1.println(secsSince1900);
     Serial1.println("Date and hour sincronized");
- 
+
     // now convert NTP time into everyday time:
     //Serial1.print("Unix time = ");
 
@@ -369,20 +340,20 @@ time_t getNTPTime() {
     setSyncInterval(_resyncSeconds);
 
     // LED indication that all is well
-    //digitalWrite(LED_BUILTIN,LOW);  // led de indicacion de que todo esta bien. 
+    //digitalWrite(LED_BUILTIN,LOW);  // led de indicacion de que todo esta bien.
 
     return epoch;
   }
 
   // Failed to get an NTP/UDP response
-  Serial1.println("No response");
+  Serial1.println("No response from ServerTime. Failed to sync current time.");
   setSyncInterval(_resyncErrorSeconds);
 
   return 0;
 }
 
 //-----------------------------------------------------------------------------
-// send an NTP request to the time server at the given address
+// Send an NTP request to the time server at the given address
 //-----------------------------------------------------------------------------
 void sendNTPpacket(const char* address) {
   // set all bytes in the buffer to 0
@@ -412,23 +383,25 @@ void sendNTPpacket(const char* address) {
   Udp.endPacket();
 }
 
+
 void setup_wifi() {
-  Serial1.println("\nWait for WiFi... ");   
-  wifiMulti.addAP("TNTsport", "9122018TresUno");
+  Serial1.println("\nWait for WiFi... ");
   wifiMulti.addAP("FBWAY-B262", "965EE62A32AC1825");
+  wifiMulti.addAP("TNTsport", "9122018TresUno");  
   wifiMulti.addAP("angelectronica", "4242714angel");
   wifiMulti.addAP("FacIngenieria", "wifialumnos");
   wifiMulti.addAP("BandySam", "bailavanidosa");
   while (wifiMulti.run() != WL_CONNECTED) {
-     Serial1.print(".");
-     delay(500);
+    Serial1.print(".");
+    delay(500);
   }
   // connected
   Serial1.println("WiFi connected");
-  Serial1.println("IP address: ");
-  Serial1.println(WiFi.localIP());  
+  Serial1.println("Assigned IP address: ");
+  Serial1.print(WiFi.localIP());
 }
 
+// Para que el Wemos-D1-Mini se suscriba a Topics y reciva los mensajes publicados desde el Servidor Backend. {No uttilizo esta funcion en la tesis. luego borrarla para peinar el codigo.}
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived [");
   Serial.print(topic);
@@ -439,7 +412,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.println();
   //El WemosD1mini usa esta funcion callback para estar atento si hay nuevas publicaciones en el topic suscrito (casa/living/luz) y en caso afirmativo
   //enviar un frame al Xbee-Router para que activar/desactivar Relee(foco)
-  
+
   // Switch on the LED if an 1 was received as first character//envia un frame al XBee-Router(XBee-terminal) con "1" para activar el Relee que enciende el foco de luz
   if ((char)payload[0] == '1') {
     digitalWrite(BUILTIN_LED, LOW);   // Turn the LED on (Note that LOW is the voltage level
@@ -450,8 +423,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
 }
 
+
 void reconnect() {
-  // Loop until we're reconnected
+  // Loop until we're reconnected to Server Backend (MQTT)
   while (!client.connected()) {
     Serial1.print("\nAttempting MQTT connection...");
     // Create a random client ID
@@ -474,21 +448,22 @@ void reconnect() {
   }
 }
 
+
 void monitorWiFi() {
-  // Si no estamos conectados a ningun WiFi
+  // Si Wemos-D1-Mini no esta conectado a Wi-Fi
   if (wifiMulti.run() != WL_CONNECTED)   {
-    //Si habia una conexion previa viva  
+    //Si previamente estaba conectado a una señal Wi-FI
     if (connectioWasAlive == true)     {
-      connectioWasAlive = false; // asignamos que ahora ya no seguimos conectados a alguna red wifi
+      connectioWasAlive = false; // Actualizamos. Ahora Wemos-D1-Mini no esta conectado a ningun Wi-Fi
       Serial1.print("Looking for WiFi ");
     }
     Serial1.print(".");
     delay(500);
   }
-  else 
-    //Si no habia ninguna conexion wifi previamente
+  else
+    //Si previamente no estaba conectado a una señal Wi-FI
     if (connectioWasAlive == false)   {
-      connectioWasAlive = true; //asignamos una conexion viva porque ahora nos conectaremos por primera vez a una red wifi
+      connectioWasAlive = true; // Actualizamos. Ahora Wemos-D1-Mini si esta conectado a Wi-Fi
       Serial1.printf(" Connected to %s. IP address: ", WiFi.SSID().c_str());
       Serial1.print(WiFi.localIP());
     }
