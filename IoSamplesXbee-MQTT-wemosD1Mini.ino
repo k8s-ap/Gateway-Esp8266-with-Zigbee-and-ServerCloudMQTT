@@ -297,7 +297,7 @@ void printDigits(int digits) {
 //-----------------------------------------------------------------------------
 time_t getNTPTime() {
   // Send a UDP packet to the NTP pool address
-  Serial1.print("\nSending NTP packet to ");
+  Serial1.print("\nSending NTP packet to Time-Server ");
   Serial1.println(timeServer);
   sendNTPpacket(timeServer);  // Solicitamos al Servidor NTP los segundos transcurridos desde el año 1900 (para luego calcular la hora actua)
 
