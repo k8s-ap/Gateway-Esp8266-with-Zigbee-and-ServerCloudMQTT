@@ -132,10 +132,10 @@ void loop() {
         // Obtengo el Sample-IO del frame recibido y lo guardo en una variable llamada "ioSample"
         xbee.getResponse().getZBRxIoSampleResponse(ioSample);
 
-        //Serial1.print("Received I/O Sample from: ");
-        //Serial1.print(ioSample.getRemoteAddress64().getMsb(), HEX);
-        //Serial1.print(ioSample.getRemoteAddress64().getLsb(), HEX);
-        //Serial1.println("");
+        Serial1.print("Received I/O Sample from: ");
+        Serial1.print(ioSample.getRemoteAddress64().getMsb(), HEX);
+        Serial1.print(ioSample.getRemoteAddress64().getLsb(), HEX);
+        Serial1.println("");
 
         //si MAC Adress es del Nodo Router.
         if (routerXBeeMAC == ioSample.getRemoteAddress64() ) {
@@ -152,15 +152,15 @@ void loop() {
                     //Serial1.println("No se detecto movimiento");
                     //snprintf(motion, 50, "{\"value\":\"False\", \"timestamp\":\"22:13:00\"}");
                     snprintf(motion, 50, "{\"value\":\"False\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;                                        
-                    Serial1.print("Publish message on topic 'Casa/Patio/Motion001': ");
-                    Serial1.println(motion);
+                    ////Serial1.print("Publish message on topic 'Casa/Patio/Motion001': ");
+                    ////Serial1.println(motion);
                     client.publish("Casa/Patio/Motion001", motion);
                   }
                   if (ioSample.isDigitalOn(i) == 1) {
                     //Serial1.println("Se detecto movimiento.");
                     snprintf(motion, 50, "{\"value\":\"True\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
-                    Serial1.print("Publish message on topic 'Casa/Patio/Motion001': ");
-                    Serial1.println(motion);
+                    ////Serial1.print("Publish message on topic 'Casa/Patio/Motion001': ");
+                    ////Serial1.println(motion);
                     client.publish("Casa/Patio/Motion001", motion);
                   }
                 }
@@ -175,15 +175,15 @@ void loop() {
                   if (ioSample.isDigitalOn(i) == 0) {                    
                     //Serial1.println("Puerta cerrada");
                     snprintf (door, 50, "{\"value\":\"Closed\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
-                    Serial1.print("Publish message on topic 'Casa/LivingRoom/Door': ");
-                    Serial1.println(door);
+                    ////Serial1.print("Publish message on topic 'Casa/LivingRoom/Door': ");
+                    ////Serial1.println(door);
                     client.publish("Casa/LivingRoom/Door", door);
                   }
                   if (ioSample.isDigitalOn(i) == 1) {
                     //Serial1.println("Advertencia! Puerta abierta");
                     snprintf (door, 50, "{\"value\":\"Open\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
-                    Serial1.print("Publish message on topic 'Casa/LivingRoom/Door': ");
-                    Serial1.println(door);
+                    ////Serial1.print("Publish message on topic 'Casa/LivingRoom/Door': ");
+                    ////Serial1.println(door);
                     client.publish("Casa/LivingRoom/Door", door);
                   }
                 }
@@ -221,8 +221,8 @@ void loop() {
                        depende de los datos a escribir, pero snprintf() escribirá 50.
                     */
                     snprintf (gas, 50, "{\"value\":\"Normal\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
-                    Serial1.print("Publish message on topic 'Casa/Cocina/Gas': ");
-                    Serial1.println(gas);
+                    ////Serial1.print("Publish message on topic 'Casa/Cocina/Gas': ");
+                    ////Serial1.println(gas);
                     client.publish("Casa/Cocina/Gas", gas);
 
                   }
@@ -230,8 +230,8 @@ void loop() {
                   if (ioSample.isDigitalOn(i) == 0) {
                     //Serial1.println("Peligro!.Se detecto Gas Toxico");
                     snprintf (gas, 50, "{\"value\":\"Danger\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
-                    Serial1.print("Publish message topic 'Casa/Cocina/Gas': ");
-                    Serial1.println(gas);
+                    ////Serial1.print("Publish message topic 'Casa/Cocina/Gas': ");
+                    ////Serial1.println(gas);
                     client.publish("Casa/Cocina/Gas", gas);
                   }
                   //Serial1.print("Digital (DI");
@@ -297,8 +297,9 @@ void printDigits(int digits) {
 //-----------------------------------------------------------------------------
 time_t getNTPTime() {
   // Send a UDP packet to the NTP pool address
-  Serial1.print("\nSending NTP packet to ");
-  Serial1.println(timeServer);
+  Serial1.println("\nGateway connected to Internet");
+  ////Serial1.print("\nSending NTP packet to Time-Server ");
+  ////Serial1.println(timeServer);
   sendNTPpacket(timeServer);  // Solicitamos al Servidor NTP los segundos transcurridos desde el año 1900 (para luego calcular la hora actua)
 
   // Wait to see if a reply is available - timeout after X seconds. At least
@@ -325,7 +326,7 @@ time_t getNTPTime() {
     unsigned long secsSince1900 = highWord << 16 | lowWord;
     //Serial1.print("Seconds since Jan 1 1900 = ");
     //Serial1.println(secsSince1900);
-    Serial1.println("Date and hour sincronized");
+    ////Serial1.println("Date and hour sincronized");
 
     // now convert NTP time into everyday time:
     //Serial1.print("Unix time = ");
@@ -427,13 +428,13 @@ void callback(char* topic, byte* payload, unsigned int length) {
 void reconnect() {
   // Loop until we're reconnected to Server Backend (MQTT)
   while (!client.connected()) {
-    Serial1.print("\nAttempting MQTT connection...");
+    ////Serial1.print("\nAttempting MQTT connection...");    
     // Create a random client ID
     String clientId = "Gateway-Wemos-D1Mini-";
     clientId += String(random(0xffff), HEX);//cada vez que nos reconectamos, debemos hacerlo con un nuevo clientID (no el mismo).
     // Attempt to connect
     if (client.connect(clientId.c_str())) { //c_str() Convierte el contenido de una cadena a una cadena de estilo C. Nunca debe modificar la cadena a través del puntero devuelto.
-      Serial1.println("connected \n");
+      ////Serial1.println("connected \n");
       // Once connected, publish an announcement...
       client.publish("Log", "Gateway-Wemos-D1Mini reconectado al servidor mqtt://mqtt.diveriot.com:1883");
       // ... and resubscribe
