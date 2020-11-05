@@ -1,4 +1,4 @@
-/*
+/* 
   ESP8266 and MQTT
 
   This sketch demonstrates the capabilities of:
