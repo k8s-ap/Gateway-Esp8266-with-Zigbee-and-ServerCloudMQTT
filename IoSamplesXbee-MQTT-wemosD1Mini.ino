@@ -33,7 +33,6 @@
 #include <ESP8266WiFiMulti.h>
 
 //------------ Feature timestamp --------------//
-
 #define WifiTimeOutSeconds 10
 unsigned int localPort = 8888; // Just an open port we can use for the UDP packets coming back in
 
@@ -58,7 +57,6 @@ void connectToWifi();
 void printDigits(int digits);
 void digitalClockDisplay();
 time_t getNTPTime();
-
 //------------ FIN Feature timestamp --------------//
 
 
@@ -66,7 +64,6 @@ ESP8266WiFiMulti wifiMulti;
 boolean connectioWasAlive = true;
 
 //------------ Feature MQTT and Xbee-Arduino--------------//
-
 const char* mqtt_server = "mqtt.diveriot.com";
 const int mqtt_port = 1883;
 WiFiClient espClient;
@@ -81,13 +78,11 @@ XBee xbee = XBee();
 ZBRxIoSampleResponse ioSample = ZBRxIoSampleResponse();
 XBeeAddress64 routerXBeeMAC = XBeeAddress64(0x0013A200, 0x41809E95);
 XBeeAddress64 endDeviceXBeeMAC = XBeeAddress64(0x0013A200, 0x4180A081);
-
 //------------ FIN Feature MQTT and Xbee-Arduino--------------//
 
 
 void setup() {
   //------- Usado por todas las bibliotecas ---------//
-
   WiFi.mode(WIFI_OFF);        //Prevents reconnection issue (taking too long to connect)
   Serial.begin(9600);           // Inicio la comunicacion-serial entre el dispositivo XBeeProS2C (Nodo Zigbee Coordinador)
   xbee.setSerial(Serial);     // Seteo/vinculo dicha conmunicacion-serial con el objeto xbee.
@@ -95,8 +90,7 @@ void setup() {
   Serial1.begin(9600);        // Inicio comunicacion-serial-1 para mostrar por el monitor serial los mensajes de depuración
   setup_wifi();
 
-  //------- Timestamp---------//
-  
+  //------- Timestamp---------//  
   Udp.begin(localPort); // What port will the UDP/NTP packet respond on?
   setSyncProvider(getNTPTime); // What is the function that gets the time (in ms since 01/01/1900)?
   // How often should we synchronise the time on this machine (in seconds)?
@@ -170,7 +164,7 @@ void loop() {
               }
               /*-----------------------------*/
               // si es DI2 (Sensor de puerta)
-              if (i == 2) {                
+              if (i == 2) {               
                 if (ioSample.isDigitalEnabled(i)) {
                   if (ioSample.isDigitalOn(i) == 0) {                    
                     //Serial1.println("Puerta cerrada");
