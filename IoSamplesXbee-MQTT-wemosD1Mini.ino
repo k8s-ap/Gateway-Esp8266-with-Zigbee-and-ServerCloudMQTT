@@ -1,7 +1,7 @@
 /* 
   ESP8266 and MQTT
 
-  This sketch demonstrates the capabilities of:
+  This sketch:
   - the pubsub library in combination with the ESP8266 board/library.
 
   It connects to an MQTT Server "mqtt.diveriot.com:1883 then:
@@ -32,7 +32,7 @@
 #include <TimeLib.h> // Synchronisation library
 #include <ESP8266WiFiMulti.h>
 
-//------------ Feature timestamp --------------//
+//------------ Feature Timestamp --------------//
 #define WifiTimeOutSeconds 10
 unsigned int localPort = 8888; // Just an open port we can use for the UDP packets coming back in
 
@@ -98,7 +98,7 @@ void setup() {
   // Use 86400 for 1 daybut once an hour (3600) is more than enough usually
   setSyncInterval(_resyncSeconds); // just for demo purposes!
 
-  //------- Config mqtt---------//
+  //------- Config mqtt ---------//
   client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
 }
@@ -111,13 +111,14 @@ void loop() {
     //------- Logica MQTT ---------//
     // Attempt to read a packet (Intento leer un frame)
     xbee.readPacket();
-
     if (xbee.getResponse().isAvailable()) {
       // got something (tenemos algo )
-
       if (xbee.getResponse().getApiId() == ZB_IO_SAMPLE_RESPONSE) {
         time_t t = now(); // Guardo la hora exacta 
         // Me aseguro que mantengo la conexion activa con el Servidor Backend
+        if (client.connected()) {
+          Serial1.println("Conectado al servidor (broker mqtt)");
+        }
         if (!client.connected()) {
           reconnect();
         }
@@ -192,7 +193,7 @@ void loop() {
         //Si el frame proviene del Nodo EndDevice
         if (endDeviceXBeeMAC == ioSample.getRemoteAddress64() ) {
           //Serial1.println("Received I/O Sample from END-DEVICE");
-          //El frame contiene Sample (muestra) de dato Digital
+          //El frame contiene Sample Digital
           if (ioSample.containsDigital()) {
             //Serial1.println("Sample contains digtal data");
             // check digital inputs
