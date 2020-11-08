@@ -31,6 +31,7 @@
 #include <WiFiUdp.h> // UDP library which is how we communicate with Time Server
 #include <TimeLib.h> // Synchronisation library
 #include <ESP8266WiFiMulti.h>
+#include <ArduinoJson.h>
 
 //------------ Feature Timestamp --------------//
 #define WifiTimeOutSeconds 10
@@ -59,21 +60,25 @@ void digitalClockDisplay();
 time_t getNTPTime();
 //------------ FIN Feature timestamp --------------//
 
-
 ESP8266WiFiMulti wifiMulti;
 boolean connectioWasAlive = true;
 
 //------------ Feature MQTT and Xbee-Arduino--------------//
 const char* mqtt_server = "mqtt.diveriot.com";
 const int mqtt_port = 1883;
+#define TOPIC_PRESENCIA "home/livingroom/motion001"
+#define TOPIC_PUERTA "home/garage/door"
+#define TOPIC_MONOXIDO_CARBONO "home/kitchen/gas"
+
 WiFiClient espClient;
 PubSubClient client(espClient);
 //long lastMsg = 0;
 char gas[50];
-char motion[50];
+//char motion[50];
 char door[50];
 int timestamp = 0;
-
+StaticJsonDocument<200> doc; // 200 es el tamaño del documento. Ajustarlo al tamaño 50 (avriguar) del message enviado al mqtt broker diveriot
+char mybuffer[256]; //variable temporal para almacenar el par key/value del message para publicarlo en el broker
 XBee xbee = XBee();
 ZBRxIoSampleResponse ioSample = ZBRxIoSampleResponse();
 XBeeAddress64 routerXBeeMAC = XBeeAddress64(0x0013A200, 0x41809E95);
@@ -99,27 +104,26 @@ void setup() {
   setSyncInterval(_resyncSeconds); // just for demo purposes!
 
   //------- Config mqtt ---------//
-  client.setServer(mqtt_server, mqtt_port);
+  client.setServer(mqtt_server, mqtt_port); //Falta agregar un mensaje cuando se conecto por primera vez, avisando que el server esa dispobnible y no caido
   client.setCallback(callback);
 }
-
 
 void loop() {
   monitorWiFi();
   if ( (wifiMulti.run() == WL_CONNECTED) && (connectioWasAlive == true) )  {
-
     //------- Logica MQTT ---------//
-    // Attempt to read a packet (Intento leer un frame)
+    // Attempt to read a packet (Intento leer un frame Zigbee)
     xbee.readPacket();
     if (xbee.getResponse().isAvailable()) {
-      // got something (tenemos algo )
+      // got something (obtubimos algo). Si el Id del grame es "Respuesta de muestreo IO"
       if (xbee.getResponse().getApiId() == ZB_IO_SAMPLE_RESPONSE) {
-        time_t t = now(); // Guardo la hora exacta 
-        // Me aseguro que mantengo la conexion activa con el Servidor Backend
+        time_t t = now(); // Guardo la hora exacta // Aqui uso la nueva libreria TIME (tambien para javascript)
+        // Me aseguro que continuo conectado activamente al Server Backend MQTT DIVERIOT
         if (client.connected()) {
-          Serial1.println("Conectado al servidor (broker mqtt)");
+          Serial1.println("DEBUG-->Sigo conectado al Server MQTT diveriot)");
         }
         if (!client.connected()) {
+          Serial1.println("DEBUG-->Me desconecte del Server MQTT diveriot. Me reconectaré)");
           reconnect();
         }
         client.loop();  //Para que el Wemos-D1-Mini procese los mensajes entrantes y mantenga su conexión al Servidor Backend.
@@ -132,31 +136,45 @@ void loop() {
         //Serial1.print(ioSample.getRemoteAddress64().getLsb(), HEX);
         //Serial1.println("");
 
-        //si MAC Adress es del Nodo Router.
+        //si ioSample proviene del Nodo Router 
         if (routerXBeeMAC == ioSample.getRemoteAddress64() ) {
           //Serial1.println("Received I/O Sample from ROUTER");
           if (ioSample.containsDigital()) {
             //Serial1.println("Sample contains digtal data");
-            // check digital inputs
+            // check digital inputs desde el ¿DIO?0 hasta el ¿DIO?12)
             for (int i = 0; i <= 12; i++) {
-              // si es DI0 (Sensor de movimiento)
+              // si es DI0 (Sensor de movimiento conectado al pin DIO0)
               if (i == 0) {
                 // si DIO0 (pin 20) esta seteado como Digital Input (previamente configurado con XCTU)
-                if (ioSample.isDigitalEnabled(i)) {
+                if (ioSample.isDigitalEnabled(i)) {                  
                   if (ioSample.isDigitalOn(i) == 0) {
-                    //Serial1.println("No se detecto movimiento");
-                    //snprintf(motion, 50, "{\"value\":\"False\", \"timestamp\":\"22:13:00\"}");
-                    snprintf(motion, 50, "{\"value\":\"False\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;                                        
-                    Serial1.print("Publish message on topic 'Casa/Patio/Motion001': ");
-                    Serial1.println(motion);
-                    client.publish("Casa/Patio/Motion001", motion);
+                    //Serial1.println("No se detecto movimiento");                    
+                    doc["sensor"] = "ausencia";
+                    doc["time"] = "0123456789";
+                    doc["data"] = false;
+                    
+                    //snprintf(motion, 50, "{\"value\":\"False\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;                                        
+                    
+                    //Serial1.print("Publish message on topic 'Casa/Patio/Motion001': ");
+                    // Serial1.println(motion);
+                    serializeJson(doc, mybuffer);                    
+                    client.publish("home/livingroom/motion001", mybuffer);
+                    Serial1.print("Publish message no-movimiento");
                   }
                   if (ioSample.isDigitalOn(i) == 1) {
                     //Serial1.println("Se detecto movimiento.");
-                    snprintf(motion, 50, "{\"value\":\"True\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
-                    Serial1.print("Publish message on topic 'Casa/Patio/Motion001': ");
-                    Serial1.println(motion);
-                    client.publish("Casa/Patio/Motion001", motion);
+                    doc["sensor"] = "presencia";
+                    doc["time"] = "0123456789";
+                    doc["data"] = true;
+                    serializeJson(doc, mybuffer);
+                    Serial1.print(mybuffer);
+                    client.publish("Casa/LivingRoom/Motion001", mybuffer);
+                    Serial1.print("Publish message si-movimiento\n");                   
+                    
+                    // snprintf(motion, 50, "{\"value\":\"True\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
+                    // Serial1.print("Publish message on topic 'Casa/Patio/Motion001': ");
+                    // Serial1.println(motion);
+                    // client.publish("Casa/Patio/Motion001", motion);
                   }
                 }
                 else {
