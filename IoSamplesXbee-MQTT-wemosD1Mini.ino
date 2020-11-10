@@ -64,7 +64,8 @@ ESP8266WiFiMulti wifiMulti;
 boolean connectioWasAlive = true;
 
 //------------ Feature MQTT and Xbee-Arduino--------------//
-const char* mqtt_server = "mqtt.diveriot.com";
+// const char* mqtt_server = "mqtt.diveriot.com";
+const char* mqtt_server = "192.168.0.10";
 const int mqtt_port = 1883;
 #define TOPIC_PRESENCIA "home/livingroom/motion001"
 #define TOPIC_PUERTA "home/garage/door"
@@ -149,28 +150,28 @@ void loop() {
                 if (ioSample.isDigitalEnabled(i)) {                  
                   if (ioSample.isDigitalOn(i) == 0) {
                     //Serial1.println("No se detecto movimiento");                    
-                    doc["sensor"] = "ausencia";
-                    doc["time"] = "0123456789";
-                    doc["data"] = false;
-                    
-                    //snprintf(motion, 50, "{\"value\":\"False\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;                                        
-                    
+                    doc["sensor"] = "PIR";
+                    doc["time"] = "21:44:20";
+                    doc["data"] = "false";                    
+                    serializeJson(doc, mybuffer);                    
+                    client.publish("Home/LivingRoom/Motion001", mybuffer);
+                    Serial1.print("Publish message on topic 'Casa/LivingRoom/Motion001':");
+                    Serial1.println(mybuffer);
+
+                    //snprintf(motion, 50, "{\"value\":\"False\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;                                                            
                     //Serial1.print("Publish message on topic 'Casa/Patio/Motion001': ");
                     // Serial1.println(motion);
-                    serializeJson(doc, mybuffer);                    
-                    client.publish("home/livingroom/motion001", mybuffer);
-                    Serial1.print("Publish message no-movimiento");
                   }
                   if (ioSample.isDigitalOn(i) == 1) {
                     //Serial1.println("Se detecto movimiento.");
-                    doc["sensor"] = "presencia";
-                    doc["time"] = "0123456789";
-                    doc["data"] = true;
-                    serializeJson(doc, mybuffer);
-                    Serial1.print(mybuffer);
-                    client.publish("Casa/LivingRoom/Motion001", mybuffer);
-                    Serial1.print("Publish message si-movimiento\n");                   
-                    
+                    doc["sensor"] = "PIR";
+                    doc["time"] = "21:45:50";
+                    doc["data"] = "true";
+                    serializeJson(doc, mybuffer);                    
+                    client.publish("Home/LivingRoom/Motion001", mybuffer);
+                    Serial1.print("Publish message on topic 'Casa/LivingRoom/Motion001':");
+                    Serial1.println(mybuffer);
+
                     // snprintf(motion, 50, "{\"value\":\"True\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
                     // Serial1.print("Publish message on topic 'Casa/Patio/Motion001': ");
                     // Serial1.println(motion);
@@ -188,16 +189,16 @@ void loop() {
                   if (ioSample.isDigitalOn(i) == 0) {                    
                     //Serial1.println("Puerta cerrada");
                     snprintf (door, 50, "{\"value\":\"Closed\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
-                    Serial1.print("Publish message on topic 'Casa/LivingRoom/Door': ");
+                    Serial1.print("Publish message on topic 'Home/LivingRoom/Door': ");
                     Serial1.println(door);
-                    client.publish("Casa/LivingRoom/Door", door);
+                    client.publish("Home/LivingRoom/Door", door);
                   }
                   if (ioSample.isDigitalOn(i) == 1) {
                     //Serial1.println("Advertencia! Puerta abierta");
                     snprintf (door, 50, "{\"value\":\"Open\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
-                    Serial1.print("Publish message on topic 'Casa/LivingRoom/Door': ");
+                    Serial1.print("Publish message on topic 'Home/LivingRoom/Door': ");
                     Serial1.println(door);
-                    client.publish("Casa/LivingRoom/Door", door);
+                    client.publish("Home/LivingRoom/Door", door);
                   }
                 }
                 else {
@@ -234,18 +235,18 @@ void loop() {
                        depende de los datos a escribir, pero snprintf() escribirá 50.
                     */
                     snprintf (gas, 50, "{\"value\":\"Normal\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
-                    Serial1.print("Publish message on topic 'Casa/Cocina/Gas': ");
+                    Serial1.print("Publish message on topic 'Home/Kitchen/Gas': ");
                     Serial1.println(gas);
-                    client.publish("Casa/Cocina/Gas", gas);
+                    client.publish("Home/Kitchen/Gas", gas);
 
                   }
                   // Si dioxido de carbono
                   if (ioSample.isDigitalOn(i) == 0) {
                     //Serial1.println("Peligro!.Se detecto Gas Toxico");
                     snprintf (gas, 50, "{\"value\":\"Danger\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
-                    Serial1.print("Publish message topic 'Casa/Cocina/Gas': ");
+                    Serial1.print("Publish message topic 'Home/Kitchen/Gas': ");
                     Serial1.println(gas);
-                    client.publish("Casa/Cocina/Gas", gas);
+                    client.publish("Home/Kitchen/Gas", gas);
                   }
                   //Serial1.print("Digital (DI");
                   //Serial1.print(i, DEC);
@@ -442,15 +443,15 @@ void reconnect() {
   while (!client.connected()) {
     Serial1.print("\nAttempting MQTT connection...");
     // Create a random client ID
-    String clientId = "Gateway-Wemos-D1Mini-";
+    String clientId = "Gateway-ESP8266-";
     clientId += String(random(0xffff), HEX);//cada vez que nos reconectamos, debemos hacerlo con un nuevo clientID (no el mismo).
     // Attempt to connect
     if (client.connect(clientId.c_str())) { //c_str() Convierte el contenido de una cadena a una cadena de estilo C. Nunca debe modificar la cadena a través del puntero devuelto.
       Serial1.println("connected \n");
       // Once connected, publish an announcement...
-      client.publish("Log", "Gateway-Wemos-D1Mini reconectado al servidor mqtt://mqtt.diveriot.com:1883");
+      client.publish("Log", "Gateway-ESP8866 reconectado al servidor mqtt://mqtt.diveriot.com:1883");
       // ... and resubscribe
-      client.subscribe("Casa/LivingRoom/Luz"); // Me suscribo al TOPIC cuando me conecto por primera vez al Server Backend
+      /* client.subscribe("Casa/LivingRoom/Luz"); // Me suscribo al TOPIC cuando me conecto por primera vez al Server Backend. (NO LO USARE POR EL MOMENTO EN LA TESIS) */
     } else {
       Serial1.print("failed, rc=");
       Serial1.print(client.state());
