@@ -152,7 +152,7 @@ void loop() {
                     //Serial1.println("No se detecto movimiento");                    
                     doc["sensor"] = "PIR";
                     doc["time"] = "21:44:20";
-                    doc["data"] = "false";                    
+                    doc["value"] = "false";                    
                     serializeJson(doc, mybuffer);                    
                     client.publish("Home/LivingRoom/Motion001", mybuffer);
                     Serial1.print("Publish message on topic 'Casa/LivingRoom/Motion001':");
@@ -166,10 +166,10 @@ void loop() {
                     //Serial1.println("Se detecto movimiento.");
                     doc["sensor"] = "PIR";
                     doc["time"] = "21:45:50";
-                    doc["data"] = "true";
+                    doc["value"] = "true";
                     serializeJson(doc, mybuffer);                    
                     client.publish("Home/LivingRoom/Motion001", mybuffer);
-                    Serial1.print("Publish message on topic 'Casa/LivingRoom/Motion001':");
+                    Serial1.print("Publish message on topic 'Home/LivingRoom/Motion001':");
                     Serial1.println(mybuffer);
 
                     // snprintf(motion, 50, "{\"value\":\"True\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
@@ -188,17 +188,33 @@ void loop() {
                 if (ioSample.isDigitalEnabled(i)) {
                   if (ioSample.isDigitalOn(i) == 0) {                    
                     //Serial1.println("Puerta cerrada");
-                    snprintf (door, 50, "{\"value\":\"Closed\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
+                    doc["sensor"] = "MAGNETICO";
+                    doc["time"] = "23:10:00";
+                    doc["value"] = "false";
+                    serializeJson(doc, mybuffer);                    
+                    client.publish("Home/LivingRoom/Door001", mybuffer);
+                    Serial1.print("Publish message on topic 'Home/LivingRoom/Door001':");
+                    Serial1.println(mybuffer);
+
+                    /* snprintf (door, 50, "{\"value\":\"Closed\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
                     Serial1.print("Publish message on topic 'Home/LivingRoom/Door': ");
                     Serial1.println(door);
-                    client.publish("Home/LivingRoom/Door", door);
+                    client.publish("Home/LivingRoom/Door", door); */
                   }
                   if (ioSample.isDigitalOn(i) == 1) {
                     //Serial1.println("Advertencia! Puerta abierta");
-                    snprintf (door, 50, "{\"value\":\"Open\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
+                    doc["sensor"] = "MAGNETICO";
+                    doc["time"] = "23:11:11";
+                    doc["value"] = "true";
+                    serializeJson(doc, mybuffer);                    
+                    client.publish("Home/LivingRoom/Door001", mybuffer);
+                    Serial1.print("Publish message on topic 'Home/LivingRoom/Door001':");
+                    Serial1.println(mybuffer);
+
+                    /* snprintf (door, 50, "{\"value\":\"Open\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
                     Serial1.print("Publish message on topic 'Home/LivingRoom/Door': ");
                     Serial1.println(door);
-                    client.publish("Home/LivingRoom/Door", door);
+                    client.publish("Home/LivingRoom/Door", door); */
                   }
                 }
                 else {
