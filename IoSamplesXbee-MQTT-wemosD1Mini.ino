@@ -1,5 +1,5 @@
 /* 
-  ESP8266 and MQTT
+  Send sensor-data from ESP8266 to Server Broker MQTT. 
 
   This sketch:
   - the pubsub library in combination with the ESP8266 board/library.
@@ -64,20 +64,18 @@ ESP8266WiFiMulti wifiMulti;
 boolean connectioWasAlive = true;
 
 //------------ Feature MQTT and Xbee-Arduino--------------//
-// const char* mqtt_server = "mqtt.diveriot.com";
-const char* mqtt_server = "192.168.0.10";
+// const char* mqtt_server = "mqtt.diveriot.com"; // Activar cuando se pone en produccion, con el servidor cloud 
+const char* mqtt_server = "192.168.0.10"; // activar solamente cuando se desarrolla (development) con la PC LOCAL
 const int mqtt_port = 1883;
-#define TOPIC_PRESENCIA "home/livingroom/motion001"
-#define TOPIC_PUERTA "home/garage/door"
-#define TOPIC_MONOXIDO_CARBONO "home/kitchen/gas"
+#define TOPIC_MOVIMIENTO "Home/LivingRoom/Motion001"
+#define TOPIC_PORTON "Home/Garage/Door001"
+#define TOPIC_MONOXIDO_CARBONO "Home/Kitchen/Gas001"
 
 WiFiClient espClient;
 PubSubClient client(espClient);
 //long lastMsg = 0;
 char gas[50];
-//char motion[50];
-char door[50];
-int timestamp = 0;
+int timestamp = 0; // USAR ESTA VARIABLE LUEGO, PARA la libreria tyme arduino
 StaticJsonDocument<200> doc; // 200 es el tamaño del documento. Ajustarlo al tamaño 50 (avriguar) del message enviado al mqtt broker diveriot
 char mybuffer[256]; //variable temporal para almacenar el par key/value del message para publicarlo en el broker
 XBee xbee = XBee();
@@ -154,7 +152,7 @@ void loop() {
                     doc["time"] = "21:44:20";
                     doc["value"] = "false";                    
                     serializeJson(doc, mybuffer);                    
-                    client.publish("Home/LivingRoom/Motion001", mybuffer);
+                    client.publish(TOPIC_MOVIMIENTO, mybuffer);
                     Serial1.print("Publish message on topic 'Casa/LivingRoom/Motion001':");
                     Serial1.println(mybuffer);
 
@@ -167,10 +165,18 @@ void loop() {
                     doc["sensor"] = "PIR";
                     doc["time"] = "21:45:50";
                     doc["value"] = "true";
-                    serializeJson(doc, mybuffer);                    
-                    client.publish("Home/LivingRoom/Motion001", mybuffer);
+                    serializeJson(doc, mybuffer);  
+                                      
+                    client.publish(TOPIC_MOVIMIENTO, mybuffer);
                     Serial1.print("Publish message on topic 'Home/LivingRoom/Motion001':");
                     Serial1.println(mybuffer);
+                    
+                    // size_t memoryUsage() const;
+                    // Serial1.println(doc.memoryUsage());     // 16 on AVR
+                    // Serial1.println(mybuffer.memoryUsage());     // 16 on AVR
+
+
+
 
                     // snprintf(motion, 50, "{\"value\":\"True\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
                     // Serial1.print("Publish message on topic 'Casa/Patio/Motion001': ");
