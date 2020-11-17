@@ -104,8 +104,8 @@ void setup()
   //------- Config mqtt ---------//
   client.setServer(mqtt_server, mqtt_port); //Falta agregar un mensaje cuando se conecto por primera vez, avisando que el server esa dispobnible y no caido
   client.setCallback(callback);
-  // Attempt to read a packet
-  Serial1.println("Esperando lectura de paquetes Zigbee ...");
+  // Attempt to read a packet XBee
+  Serial1.print("Attempting to read a Zigbee-packet... ");
 }
 
 void loop()
@@ -121,10 +121,12 @@ void loop()
       // got something (obtubimos algo). Si el Id del grame es "Respuesta de muestreo IO"
       if (xbee.getResponse().getApiId() == ZB_IO_SAMPLE_RESPONSE)
       {
-        time_t t = now(); // Guardo la hora exacta // Aqui uso la nueva libreria TIME (tambien para javascript)
+        time_t t = now(); // apenas legue un paquete de tipo iosamples, asigno hora de su llegada (sin importar que sea muestreo del pir, magnetic o mq7).
+        //a continuacion le asigno el tiempo transcurrido desde 1977. Luego en el server backend calculo la hora actual.  
+        doc["time"] = t; 
         if (!client.connected())
         {
-          Serial1.println("Reconectando al Servidor MQTT Diveriot ...");
+          // Serial1.println("Reconectando al Servidor MQTT Diveriot ...");
           reconnect();
         }
         client.loop(); //¿lo podria omitir?Para que el Wemos-D1-Mini procese los mensajes entrantes y mantenga su conexión al Servidor Backend.
@@ -154,11 +156,10 @@ void loop()
                 if (ioSample.isDigitalEnabled(i))
                 {
                   doc["sensor"] = "PIR";
-                  doc["time"] = "21:45:50"; // automatizar
                   if (ioSample.isDigitalOn(i) == 1)
                   {
                     //Serial1.println("Se detecto movimiento.");
-                    doc["value"] = "true";
+                    doc["value"] = true;
                     serializeJson(doc, mybuffer);
                     client.publish(TOPIC_MOVIMIENTO, mybuffer);
                     Serial1.println(" ");
@@ -180,7 +181,7 @@ void loop()
                   if (ioSample.isDigitalOn(i) == 0)
                   {
                     //Serial1.println("No se detecto movimiento");
-                    doc["value"] = "false";
+                    doc["value"] = false;
                     serializeJson(doc, mybuffer);
                     client.publish(TOPIC_MOVIMIENTO, mybuffer);
                     Serial1.println(" ");
@@ -206,12 +207,11 @@ void loop()
               {
                 if (ioSample.isDigitalEnabled(i))
                 {
-                  doc["sensor"] = "MAGNETICO";
-                  doc["time"] = "22:45:50"; // automatizar
+                  doc["sensor"] = "MAGNETIC";
                   if (ioSample.isDigitalOn(i) == 1)
                   {
                     //Serial1.println("Puerta abierta");
-                    doc["value"] = "true";
+                    doc["value"] = true;
                     serializeJson(doc, mybuffer);
                     client.publish(TOPIC_PORTON, mybuffer);
                     Serial1.println(" ");
@@ -224,7 +224,7 @@ void loop()
                   if (ioSample.isDigitalOn(i) == 0)
                   {
                     //Serial1.println("Puerta cerrada");
-                    doc["value"] = "false";
+                    doc["value"] = false;
                     serializeJson(doc, mybuffer);
                     client.publish(TOPIC_PORTON, mybuffer);
                     Serial1.println(" ");
@@ -261,8 +261,7 @@ void loop()
                 // si DIO0 (pin 20) esta seteado como Digital Input (previamente realizado con XCTU)
                 if (ioSample.isDigitalEnabled(i))
                 {
-                  doc["sensor"] = "GAS";
-                  doc["time"] = "23:45:50"; // automatizar
+                  doc["sensor"] = "MQ7";
                   if (ioSample.isDigitalOn(i) == 0)
                   { 
                     //Serial1.println("Peligro!.Se detecto monoxido de carbono");
@@ -273,7 +272,7 @@ void loop()
                        depende de los datos a escribir, pero snprintf() escribirá 50.
                        snprintf(gas, 50, "{\"value\":\"Normal\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));
                     */                                        
-                    doc["value"] = "true";
+                    doc["value"] = true;
                     serializeJson(doc, mybuffer);
                     client.publish(TOPIC_MONOXIDO_CARBONO, mybuffer);
                     Serial1.println(" ");
@@ -287,7 +286,7 @@ void loop()
                   {
                     //Serial1.println("No se detecto monoxido de carbono");
                     //Serial1.println("Puerta cerrada");
-                    doc["value"] = "false";
+                    doc["value"] = false;
                     serializeJson(doc, mybuffer);
                     client.publish(TOPIC_MONOXIDO_CARBONO, mybuffer);
                     Serial1.println(" ");
@@ -513,7 +512,7 @@ void reconnect()
     // Attempt to connect
     if (client.connect(clientId.c_str()))
     { //c_str() Convierte el contenido de una cadena a una cadena de estilo C. Nunca debe modificar la cadena a través del puntero devuelto.
-      Serial1.println("connected \n");
+      Serial1.print("connected \n");
       // Once connected, publish an announcement...
       client.publish("Log", "Gateway-ESP8866 reconectado al servidor mqtt://mqtt.diveriot.com:1883");
       // ... and resubscribe
