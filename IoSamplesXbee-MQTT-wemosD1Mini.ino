@@ -105,7 +105,7 @@ void setup()
   client.setServer(mqtt_server, mqtt_port); //Falta agregar un mensaje cuando se conecto por primera vez, avisando que el server esa dispobnible y no caido
   client.setCallback(callback);
   // Attempt to read a packet
-  Serial1.println("Wait to read a Zigbee-packet  ...");
+  Serial1.println("Esperando lectura de paquetes Zigbee ...");
 }
 
 void loop()
@@ -217,7 +217,7 @@ void loop()
                     Serial1.println(" ");
                     Serial1.print("Publish on topic ");
                     Serial1.print(TOPIC_PORTON);
-                    Serial1.print(" message:           ");
+                    Serial1.print(" message:             ");
                     Serial1.print(mybuffer);
                     Serial1.println(" ");
                   }
@@ -230,7 +230,7 @@ void loop()
                     Serial1.println(" ");
                     Serial1.print("Publish on topic ");
                     Serial1.print(TOPIC_PORTON);
-                    Serial1.print(" message:           ");
+                    Serial1.print(" message:             ");
                     Serial1.print(mybuffer);
                     Serial1.println(" ");                    
                   }
