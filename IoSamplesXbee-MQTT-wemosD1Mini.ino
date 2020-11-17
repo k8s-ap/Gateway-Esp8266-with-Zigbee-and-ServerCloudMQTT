@@ -49,7 +49,7 @@ const int timeZone = -3;                                                        
 String DoW[] = {"Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"}; // Days of week. Day 1 = Sunday
 
 // How often to resync the time (under normal and error conditions)
-#define _resyncSeconds 300 //300 is 5 minutos // 3600 is 1 hour. 86400 is on day
+#define _resyncSeconds 3600 //300 is 5 minutos // 3600 is 1 hour. 86400 is on day
 #define _resyncErrorSeconds 15
 #define _millisMinute 60000
 
@@ -458,7 +458,6 @@ void setup_wifi()
 {
   Serial1.println("\nWait for WiFi... ");
   wifiMulti.addAP("FBWAY-B262", "965EE62A32AC1825");
-  wifiMulti.addAP("TNTsport", "9122018TresUno");
   wifiMulti.addAP("angelectronica", "4242714angel");
   wifiMulti.addAP("FacIngenieria", "wifialumnos");
   wifiMulti.addAP("BandySam", "bailavanidosa");
