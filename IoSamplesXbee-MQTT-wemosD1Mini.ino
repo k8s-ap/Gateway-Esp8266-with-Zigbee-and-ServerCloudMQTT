@@ -41,11 +41,11 @@ unsigned int localPort = 8888; // Just an open port we can use for the UDP packe
 // If you're not in the UK, use "time.nist.gov"
 // Elsewhere: USA us.pool.ntp.org
 // Read more here: http://www.pool.ntp.org/en/use.html
-char timeServer[] = "uk.pool.ntp.org";                                                     //"time.nist.gov";
-const int NTP_PACKET_SIZE = 48;                                                            // NTP time stamp is in the first 48 bytes of the message
-byte packetBuffer[NTP_PACKET_SIZE];                                                        //buffer to hold incoming and outgoing packets
-WiFiUDP Udp;                                                                               // A UDP instance to let us send and receive packets over UDP
-const int timeZone = -3;                                                                   // Your time zone relative to GMT/UTC. // Not used (yet)
+char timeServer[] = "uk.pool.ntp.org";//"time.nist.gov";
+const int NTP_PACKET_SIZE = 48;    // NTP time stamp is in the first 48 bytes of the message
+byte packetBuffer[NTP_PACKET_SIZE];//buffer to hold incoming and outgoing packets
+WiFiUDP Udp;            // A UDP instance to let us send and receive packets over UDP
+const int timeZone = -3;// Your time zone relative to GMT/UTC. // Not used (yet)
 String DoW[] = {"Domingo", "Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"}; // Days of week. Day 1 = Sunday
 
 // How often to resync the time (under normal and error conditions)
@@ -64,8 +64,9 @@ ESP8266WiFiMulti wifiMulti;
 boolean connectioWasAlive = true;
 
 //------------ Feature MQTT and Xbee-Arduino--------------//
-// const char* mqtt_server = "mqtt.diveriot.com"; // Activar cuando se pone en produccion, con el servidor cloud
-const char *mqtt_server = "192.168.0.10"; // activar solamente cuando se desarrolla (development) con la PC LOCAL
+// Descomentar la linea del mqtt_server que corresponda
+const char* mqtt_server = "mqtt.diveriot.com"; // Para entorno de produccion (servidor google cloud)
+// const char *mqtt_server = "192.168.0.10"; // Para entorno de desarrolla (computadora local)
 const int mqtt_port = 1883;
 #define TOPIC_MOVIMIENTO "Casa/LivingRoom/Movimiento"
 #define TOPIC_PORTON "Casa/Garage/Porton"
@@ -122,8 +123,9 @@ void loop()
       if (xbee.getResponse().getApiId() == ZB_IO_SAMPLE_RESPONSE)
       {
         time_t t = now(); // apenas legue un paquete de tipo iosamples, asigno hora de su llegada (sin importar que sea muestreo del pir, magnetic o mq7).
-        //a continuacion le asigno el tiempo transcurrido desde 1977. Luego en el server backend calculo la hora actual.  
-        doc["time"] = t; 
+        // Serial1.printf("-----> hora Local es :\"%d:%d:%d\"}", hour(t), minute(t), second(t));
+        //a continuacion le asigno el tiempo transcurrido desde 1977. Luego en el server backend calculo la hora actual.
+        doc["time"] = t; // luego cambiarlo para que: se guarde los segundos transcurridos desde 1970 pero en hora local de argentina
         if (!client.connected())
         {
           // Serial1.println("Reconectando al Servidor MQTT Diveriot ...");
@@ -139,8 +141,7 @@ void loop()
         //Serial1.print(ioSample.getRemoteAddress64().getLsb(), HEX);
         //Serial1.println("");
 
-        //si ioSample proviene del Nodo Router
-        if (routerXBeeMAC == ioSample.getRemoteAddress64())
+        if (ioSample.getRemoteAddress64() == routerXBeeMAC)
         {
           //Serial1.println("Received I/O Sample from ROUTER");
           if (ioSample.containsDigital())
@@ -172,11 +173,6 @@ void loop()
                     // size_t memoryUsage() const;
                     // Serial1.println(doc.memoryUsage());     // 16 on AVR
                     // Serial1.println(mybuffer.memoryUsage());     // 16 on AVR
-
-                    // snprintf(motion, 50, "{\"value\":\"True\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));;
-                    // Serial1.print("Publish message on topic 'Casa/Patio/Motion001': ");
-                    // Serial1.println(motion);
-                    // client.publish("Casa/Patio/Motion001", motion);
                   }
                   if (ioSample.isDigitalOn(i) == 0)
                   {
@@ -232,7 +228,7 @@ void loop()
                     Serial1.print(TOPIC_PORTON);
                     Serial1.print(" message:             ");
                     Serial1.print(mybuffer);
-                    Serial1.println(" ");                    
+                    Serial1.println(" ");
                   }
                 }
                 else
@@ -244,8 +240,7 @@ void loop()
           }
         }
 
-        //Si el frame proviene del Nodo EndDevice
-        if (endDeviceXBeeMAC == ioSample.getRemoteAddress64())
+        if (ioSample.getRemoteAddress64() == endDeviceXBeeMAC)
         {
           //Serial1.println("Received I/O Sample from END-DEVICE");
           //El frame contiene Sample Digital
@@ -263,7 +258,7 @@ void loop()
                 {
                   doc["sensor"] = "MQ7";
                   if (ioSample.isDigitalOn(i) == 0)
-                  { 
+                  {
                     //Serial1.println("Peligro!.Se detecto monoxido de carbono");
                     /*
                        Aunque con sprintf todo funciona bien, recomiendo utilizar snprintf() ya que a éste último
@@ -271,7 +266,7 @@ void loop()
                        ésta será recortada, es decir, si reservamos 50 bytes para la cadena, con sprintf() tal vez se escriban más,
                        depende de los datos a escribir, pero snprintf() escribirá 50.
                        snprintf(gas, 50, "{\"value\":\"Normal\", \"timestamp\":\"%d:%d:%d\"}", hour(t), minute(t), second(t));
-                    */                                        
+                    */
                     doc["value"] = true;
                     serializeJson(doc, mybuffer);
                     client.publish(TOPIC_MONOXIDO_CARBONO, mybuffer);
@@ -281,7 +276,7 @@ void loop()
                     Serial1.print(" message:    ");
                     Serial1.print(mybuffer);
                     Serial1.println(" ");
-                  }                  
+                  }
                   if (ioSample.isDigitalOn(i) == 1)
                   {
                     //Serial1.println("No se detecto monoxido de carbono");
@@ -294,7 +289,7 @@ void loop()
                     Serial1.print(TOPIC_MONOXIDO_CARBONO);
                     Serial1.print(" message:    ");
                     Serial1.print(mybuffer);
-                    Serial1.println(" ");    
+                    Serial1.println(" ");
                   }
                   //Serial1.print("Digital (DI");
                   //Serial1.print(i, DEC);
