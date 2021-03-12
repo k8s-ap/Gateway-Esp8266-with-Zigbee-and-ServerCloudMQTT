@@ -1,0 +1,2 @@
+# Gateway-Esp8266-with-Zigbee-and-ServerCloudMQTT
+Sketch subido al WemosD1-mini (ESP8266), el cual recibe "frames" del nodo zigbee cordinador (con información provenientes de los nodos EndDevice y Router). Los analizan y determina si se deben "publicar" en el "topic" correspondientes del Broker MQTT(Mosca), según el contenido del dato digital correspondiente al sensor (Motion001, Door, Gas). Se utilizaron las librerias: XBee, SoftwareSerial, PubSubClient, ArduinoJSON , TimeLib y otras.
