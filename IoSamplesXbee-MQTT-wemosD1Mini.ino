@@ -65,8 +65,8 @@ boolean connectioWasAlive = true;
 
 //------------ Feature MQTT and Xbee-Arduino--------------//
 // Descomentar la linea del mqtt_server que corresponda
-const char* mqtt_server = "mqtt.diveriot.com"; // Para entorno de produccion (servidor google cloud)
-// const char *mqtt_server = "192.168.0.10"; // Para entorno de desarrolla (computadora local)
+const char* mqtt_server = "mqtt.diveriot.com"; // Entorno de produccion (servidor google cloud)
+// const char *mqtt_server = "192.168.0.10"; // Entorno de desarrolla (computadora local)
 const int mqtt_port = 1883;
 #define TOPIC_MOVIMIENTO "Casa/LivingRoom/Movimiento"
 #define TOPIC_PORTON "Casa/Garage/Porton"
@@ -452,10 +452,8 @@ void sendNTPpacket(const char *address)
 void setup_wifi()
 {
   Serial1.println("\nWait for WiFi... ");
-  wifiMulti.addAP("FBWAY-B262", "965EE62A32AC1825");
-  wifiMulti.addAP("angelectronica", "4242714angel");
+  wifiMulti.addAP("FBWAY-B262", "y.eña");
   wifiMulti.addAP("FacIngenieria", "wifialumnos");
-  wifiMulti.addAP("BandySam", "bailavanidosa");
   while (wifiMulti.run() != WL_CONNECTED)
   {
     Serial1.print(".");
